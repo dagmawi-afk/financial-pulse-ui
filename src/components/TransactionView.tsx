@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { formatETB, formatDate } from '../lib/formatters';
+import { TRANSACTIONS, CATEGORIES } from '../lib/mockData';
 import { 
   Utensils, 
   ShoppingBag, 
@@ -7,31 +8,50 @@ import {
   Zap, 
   Coffee,
   MoreVertical,
-  ChevronRight
+  ChevronRight,
+  X,
+  Calendar,
+  Tag,
+  Building2
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Transaction } from '../types';
+import { toast } from 'sonner';
 
-const MOCK_TRANSACTIONS = [
-  { id: '1', title: 'Habesha Restaurant', category: 'Food', amount: -850, date: '2024-05-15T12:00:00', icon: <Utensils /> },
-  { id: '2', title: 'Salary Deposit', category: 'Income', amount: 45000, date: '2024-05-14T09:00:00', icon: <Zap className="text-green-600" /> },
-  { id: '3', title: 'Anbessa Bus', category: 'Transport', amount: -25, date: '2024-05-14T08:30:00', icon: <Bus /> },
-  { id: '4', title: 'Edna Mall Cinema', category: 'Entertainment', amount: -400, date: '2024-05-13T19:00:00', icon: <Coffee /> },
-  { id: '5', title: 'Shoa Supermarket', category: 'Groceries', amount: -2150.50, date: '2024-05-13T14:20:00', icon: <ShoppingBag /> },
-  { id: '6', title: 'Rent Payment', category: 'Housing', amount: -12000, date: '2024-05-12T10:00:00', icon: <Zap /> },
-  { id: '7', title: 'Tomoca Coffee', category: 'Food', amount: -120, date: '2024-05-12T09:00:00', icon: <Coffee /> },
-  { id: '8', title: 'Zemen Bank Transfer', category: 'Transfer', amount: 2500, date: '2024-05-11T16:45:00', icon: <Zap className="text-green-600" /> },
-];
+const getCategoryIcon = (category: string) => {
+  switch (category.toLowerCase()) {
+    case 'food & dining': return <Utensils />;
+    case 'transport': return <Bus />;
+    case 'groceries': return <ShoppingBag />;
+    case 'entertainment': return <Coffee />;
+    default: return <Zap />;
+  }
+};
 
 const TransactionView = () => {
   const [search, setSearch] = useState('');
+  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  const filtered = MOCK_TRANSACTIONS.filter(t => 
-    t.title.toLowerCase().includes(search.toLowerCase()) || 
+  const filtered = TRANSACTIONS.filter(t => 
+    t.description.toLowerCase().includes(search.toLowerCase()) || 
     t.category.toLowerCase().includes(search.toLowerCase())
   );
 
+  const handleUpdateCategory = (newCat: string) => {
+    if (!selectedTx) return;
+    setIsUpdating(true);
+    // Mock API call delay
+    setTimeout(() => {
+      toast.success(`Category updated to ${newCat}`);
+      setIsUpdating(false);
+      setSelectedTx(prev => prev ? { ...prev, category: newCat } : null);
+    }, 800);
+  };
+
   return (
     <div className="space-y-6">
-      {/* Search Simulation */}
+      {/* Search */}
       <div className="relative">
         <input 
           type="text"
@@ -45,25 +65,24 @@ const TransactionView = () => {
         </div>
       </div>
 
-      {/* List Header */}
       <div className="flex justify-between items-center px-1">
-        <h3 className="text-lg font-medium">Recent Activity</h3>
+        <h3 className="text-lg font-medium">Transaction History</h3>
         <button className="text-sm font-medium text-[#6750A4]">Filter</button>
       </div>
 
-      {/* "RecyclerView" Simulation */}
       <div className="space-y-2">
         {filtered.map((tx) => (
           <div 
             key={tx.id}
-            className="flex items-center gap-4 p-4 bg-white rounded-[16px] border border-[#CAC4D0]/30 hover:bg-[#F3EDF7] transition-colors cursor-pointer group active:scale-[0.98]"
+            onClick={() => setSelectedTx(tx)}
+            className="flex items-center gap-4 p-4 bg-white rounded-[20px] border border-[#CAC4D0]/30 hover:shadow-md transition-all cursor-pointer group active:scale-[0.98]"
           >
             <div className={`w-12 h-12 rounded-full flex items-center justify-center ${tx.amount > 0 ? 'bg-green-100 text-green-700' : 'bg-[#EADDFF] text-[#21005D]'}`}>
-              {tx.icon}
+              {getCategoryIcon(tx.category)}
             </div>
             <div className="flex-1">
-              <h4 className="font-medium text-[#1C1B1F] group-hover:text-[#6750A4] transition-colors">{tx.title}</h4>
-              <p className="text-xs text-[#49454F]">{tx.category} • {formatDate(tx.date)}</p>
+              <h4 className="font-medium text-[#1C1B1F] group-hover:text-[#6750A4] transition-colors">{tx.description}</h4>
+              <p className="text-xs text-[#49454F]">{tx.category} \u2022 {formatDate(tx.date)}</p>
             </div>
             <div className="text-right flex items-center gap-2">
               <span className={`font-semibold ${tx.amount > 0 ? 'text-green-600' : 'text-[#1C1B1F]'}`}>
@@ -75,11 +94,93 @@ const TransactionView = () => {
         ))}
       </div>
 
+      {/* Transaction Detail Modal */}
+      <AnimatePresence>
+        {selectedTx && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedTx(null)}
+              className="fixed inset-0 bg-black/40 z-40 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-[32px] z-50 p-6 shadow-2xl"
+            >
+              <div className="w-12 h-1.5 bg-[#CAC4D0] rounded-full mx-auto mb-6 opacity-50" />
+              
+              <div className="flex justify-between items-start mb-8">
+                <div>
+                  <h2 className="text-2xl font-bold mb-1">{selectedTx.description}</h2>
+                  <p className="text-[#49454F]">{formatDate(selectedTx.date)}</p>
+                </div>
+                <button 
+                  onClick={() => setSelectedTx(null)}
+                  className="p-2 rounded-full bg-[#F3EDF7] text-[#1D192B]"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="flex flex-col items-center justify-center mb-8 py-4 bg-[#F3EDF7] rounded-3xl">
+                <p className="text-sm text-[#49454F] uppercase tracking-widest mb-1">Amount</p>
+                <p className={`text-4xl font-bold ${selectedTx.amount > 0 ? 'text-green-600' : 'text-[#1C1B1F]'}`}>
+                  {formatETB(selectedTx.amount)}
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-[#EADDFF] flex items-center justify-center text-[#21005D]">
+                    <Building2 size={20} />
+                  </div>
+                  <div className="flex-1 border-b border-[#E7E0EC] pb-2">
+                    <p className="text-xs text-[#49454F] uppercase">Institution</p>
+                    <p className="font-medium">{selectedTx.institution}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-[#EADDFF] flex items-center justify-center text-[#21005D]">
+                    <Tag size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs text-[#49454F] uppercase mb-2">Category</p>
+                    <select 
+                      value={selectedTx.category}
+                      onChange={(e) => handleUpdateCategory(e.target.value)}
+                      disabled={isUpdating}
+                      className="w-full bg-[#F3EDF7] rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#6750A4] appearance-none disabled:opacity-50"
+                    >
+                      {CATEGORIES.map(cat => (
+                        <option key={cat.id} value={cat.name}>{cat.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setSelectedTx(null)}
+                className="w-full mt-10 bg-[#6750A4] text-white py-4 rounded-full font-bold shadow-lg shadow-[#6750A4]/20 active:scale-95 transition-all"
+              >
+                Done
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       <div className="rounded-[28px] overflow-hidden mt-6 shadow-sm border border-[#CAC4D0]">
         <img 
-          src="https://storage.googleapis.com/dala-prod-public-storage/generated-images/49d96fef-1e7f-4614-b2d8-5f31236ead96/transaction-history-6810ce8e-1772036869595.webp"
+          src="https://storage.googleapis.com/dala-prod-public-storage/generated-images/49d96fef-1e7f-4614-b2d8-5f31236ead96/transaction-details-modal-4c83ce61-1772093891308.webp"
           alt="Visual Transaction Map"
-          className="w-full h-32 object-cover"
+          className="w-full h-40 object-cover"
         />
       </div>
     </div>
