@@ -1,13 +1,9 @@
 package com.dala.logic.ui
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -23,16 +19,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import com.dala.logic.models.Transaction
-import com.dala.logic.models.TransactionType
 import com.dala.logic.viewmodel.FinanceViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionScreen(
     viewModel: FinanceViewModel,
     modifier: Modifier = Modifier
 ) {
     val transactions by viewModel.transactions.collectAsState()
+    val totalBalance by viewModel.aggregatedBalance.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
+    
+    // State for Bottom Sheet
+    var selectedTransaction by remember { mutableStateOf<Transaction?>(null) }
+    val sheetState = rememberModalBottomSheetState()
+    var showBottomSheet by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier.fillMaxSize(),
@@ -112,7 +114,13 @@ fun TransactionScreen(
                 }
             } else {
                 items(transactions, key = { it.id }) { tx ->
-                    TransactionItem(transaction = tx)
+                    TransactionRowItem(
+                        transaction = tx,
+                        onClick = {
+                            selectedTransaction = tx
+                            showBottomSheet = true
+                        }
+                    )
                 }
             }
 
@@ -121,54 +129,22 @@ fun TransactionScreen(
             }
         }
     }
-}
 
-@Composable
-fun TransactionItem(transaction: Transaction) {
-    val isIncome = transaction.type == TransactionType.CREDIT
-    val amountColor = if (isIncome) Color(0xFF2E7D32) else Color(0xFF1C1B1F)
-    val iconBackground = if (isIncome) Color(0xFFE8F5E9) else Color(0xFFEADDFF)
-    val iconTint = if (isIncome) Color(0xFF2E7D32) else Color(0xFF21005D)
-
-    ListItem(
-        modifier = Modifier.clickable { /* TODO */ },
-        headlineContent = {
-            Text(
-                text = transaction.merchant,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
-        },
-        supportingContent = {
-            Text(
-                text = "${transaction.category} \u2022 ${transaction.date.formatDate()}",
-                style = MaterialTheme.typography.bodySmall
-            )
-        },
-        leadingContent = {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(iconBackground, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = getCategoryIcon(transaction.category),
-                    contentDescription = null,
-                    tint = iconTint,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        },
-        trailingContent = {
-            Text(
-                text = "${if (isIncome) "+" else ""}${transaction.amount.formatETB()}",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = amountColor
+    // Detail Bottom Sheet
+    if (showBottomSheet && selectedTransaction != null) {
+        ModalBottomSheet(
+            onDismissRequest = { showBottomSheet = false },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface,
+            dragHandle = { BottomSheetDefaults.DragHandle() }
+        ) {
+            MpesaTransactionDetail(
+                transaction = selectedTransaction!!,
+                currentBalance = totalBalance,
+                modifier = Modifier.padding(bottom = 32.dp)
             )
         }
-    )
+    }
 }
 
 @Composable
@@ -186,17 +162,5 @@ fun TransactionVisualBanner() {
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
-    }
-}
-
-private fun getCategoryIcon(category: String): ImageVector {
-    return when (category.lowercase()) {
-        "food", "dining" -> Icons.Default.Restaurant
-        "transport", "bus" -> Icons.Default.DirectionsBus
-        "groceries", "shopping" -> Icons.Default.ShoppingBag
-        "entertainment" -> Icons.Default.TheaterComedy
-        "housing", "rent" -> Icons.Default.Home
-        "income", "salary" -> Icons.Default.AccountBalanceWallet
-        else -> Icons.Default.ReceiptLong
     }
 }

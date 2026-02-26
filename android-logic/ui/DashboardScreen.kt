@@ -2,8 +2,6 @@ package com.dala.logic.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,9 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,15 +19,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
 import com.dala.logic.models.Transaction
 import com.dala.logic.viewmodel.FinanceViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(viewModel: FinanceViewModel) {
     val transactions by viewModel.transactions.collectAsState()
     val totalBalance by viewModel.aggregatedBalance.collectAsState()
+    
+    // State for Bottom Sheet
+    var selectedTransaction by remember { mutableStateOf<Transaction?>(null) }
+    val sheetState = rememberModalBottomSheetState()
+    var showBottomSheet by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -55,13 +56,36 @@ fun DashboardScreen(viewModel: FinanceViewModel) {
             }
         } else {
             items(transactions.take(5)) { transaction ->
-                TransactionRow(transaction)
+                // TransactionRow definition (integrated with detail view)
+                TransactionRowItem(
+                    transaction = transaction,
+                    onClick = {
+                        selectedTransaction = transaction
+                        showBottomSheet = true
+                    }
+                )
             }
         }
 
         item {
             Spacer(modifier = Modifier.height(16.dp))
             DashboardBanner()
+        }
+    }
+
+    // Detail Bottom Sheet
+    if (showBottomSheet && selectedTransaction != null) {
+        ModalBottomSheet(
+            onDismissRequest = { showBottomSheet = false },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface,
+            dragHandle = { BottomSheetDefaults.DragHandle() }
+        ) {
+            MpesaTransactionDetail(
+                transaction = selectedTransaction!!,
+                currentBalance = totalBalance,
+                modifier = Modifier.padding(bottom = 32.dp)
+            )
         }
     }
 }
@@ -100,7 +124,7 @@ fun DashboardHeader(balance: Double) {
                 color = Color.White.copy(alpha = 0.8f)
             )
             Text(
-                text = "${"%.2f".format(balance)} ETB",
+                text = balance.formatETB(),
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
