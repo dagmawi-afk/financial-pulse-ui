@@ -25,8 +25,6 @@ import coil.compose.rememberAsyncImagePainter
 import com.dala.logic.models.Transaction
 import com.dala.logic.models.TransactionType
 import com.dala.logic.viewmodel.FinanceViewModel
-import java.text.SimpleDateFormat
-import java.util.*
 
 @Composable
 fun TransactionScreen(
@@ -37,57 +35,40 @@ fun TransactionScreen(
     var searchQuery by remember { mutableStateOf("") }
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        modifier = modifier.fillMaxSize(),
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Search Bar
-        TextField(
-            value = searchQuery,
-            onValueChange = {
-                searchQuery = it
-                viewModel.updateSearch(it)
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(28.dp)),
-            placeholder = { Text("Search transactions...") },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = null,
-                    tint = Color(0xFF49454F)
-                )
-            },
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color(0xFFECE6F0),
-                unfocusedContainerColor = Color(0xFFECE6F0),
-                disabledContainerColor = Color(0xFFECE6F0),
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-            ),
-            singleLine = true
-        )
-
-        // Header
-        Row(
+        // Toolbar-like search area
+        Surface(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 2.dp
         ) {
-            Text(
-                text = "Recent Activity",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Medium
-            )
-            TextButton(onClick = { /* TODO: Open Filter Sheet */ }) {
-                Text(
-                    text = "Filter",
-                    color = Color(0xFF6750A4),
-                    style = MaterialTheme.typography.labelLarge
+            Column(modifier = Modifier.padding(16.dp)) {
+                TextField(
+                    value = searchQuery,
+                    onValueChange = {
+                        searchQuery = it
+                        viewModel.updateSearch(it)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(28.dp)),
+                    placeholder = { Text("Search transactions...") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            tint = Color(0xFF49454F)
+                        )
+                    },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFFF3EDF7),
+                        unfocusedContainerColor = Color(0xFFF3EDF7),
+                        disabledContainerColor = Color(0xFFF3EDF7),
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                    ),
+                    singleLine = true
                 )
             }
         }
@@ -95,11 +76,44 @@ fun TransactionScreen(
         // List
         LazyColumn(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(1.dp),
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
-            items(transactions, key = { it.id }) { tx ->
-                TransactionItem(transaction = tx)
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "History",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    IconButton(onClick = { /* TODO */ }) {
+                        Icon(imageVector = Icons.Default.FilterList, contentDescription = "Filter")
+                    }
+                }
+            }
+
+            if (transactions.isEmpty()) {
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 100.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("No transactions found", style = MaterialTheme.typography.bodyLarge)
+                        Text("Try a different search term", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            } else {
+                items(transactions, key = { it.id }) { tx ->
+                    TransactionItem(transaction = tx)
+                }
             }
 
             item {
@@ -116,24 +130,25 @@ fun TransactionItem(transaction: Transaction) {
     val iconBackground = if (isIncome) Color(0xFFE8F5E9) else Color(0xFFEADDFF)
     val iconTint = if (isIncome) Color(0xFF2E7D32) else Color(0xFF21005D)
 
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { /* TODO */ },
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(0.5.dp, Color(0xFFCAC4D0).copy(alpha = 0.3f)),
-        color = Color.White
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
+    ListItem(
+        modifier = Modifier.clickable { /* TODO */ },
+        headlineContent = {
+            Text(
+                text = transaction.merchant,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+        },
+        supportingContent = {
+            Text(
+                text = "${transaction.category} \u2022 ${transaction.date.formatDate()}",
+                style = MaterialTheme.typography.bodySmall
+            )
+        },
+        leadingContent = {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(40.dp)
                     .background(iconBackground, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
@@ -141,43 +156,19 @@ fun TransactionItem(transaction: Transaction) {
                     imageVector = getCategoryIcon(transaction.category),
                     contentDescription = null,
                     tint = iconTint,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = transaction.merchant,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = Color(0xFF1C1B1F)
-                )
-                Text(
-                    text = "${transaction.category} \u2022 ${transaction.date.formatDate()}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF49454F)
-                )
-            }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "${if (isIncome) "+" else ""}${transaction.amount.formatETB()}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = amountColor
-                )
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = null,
-                    tint = Color(0xFFCAC4D0),
-                    modifier = Modifier.size(16.dp)
-                )
-            }
+        },
+        trailingContent = {
+            Text(
+                text = "${if (isIncome) "+" else ""}${transaction.amount.formatETB()}",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = amountColor
+            )
         }
-    }
+    )
 }
 
 @Composable
@@ -185,14 +176,13 @@ fun TransactionVisualBanner() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 16.dp)
-            .height(128.dp)
+            .padding(16.dp)
+            .height(140.dp)
             .clip(RoundedCornerShape(28.dp))
-            .border(1.dp, Color(0xFFCAC4D0), RoundedCornerShape(28.dp))
     ) {
         Image(
             painter = rememberAsyncImagePainter("https://storage.googleapis.com/dala-prod-public-storage/generated-images/49d96fef-1e7f-4614-b2d8-5f31236ead96/transaction-history-6810ce8e-1772036869595.webp"),
-            contentDescription = "Transaction History Visual",
+            contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
@@ -209,11 +199,4 @@ private fun getCategoryIcon(category: String): ImageVector {
         "income", "salary" -> Icons.Default.AccountBalanceWallet
         else -> Icons.Default.ReceiptLong
     }
-}
-
-// Extension function for date formatting
-fun Long.formatDate(): String {
-    val date = Date(this)
-    val format = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-    return format.format(date)
 }

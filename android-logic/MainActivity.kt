@@ -1,67 +1,49 @@
-package com.dala.finance
+package com.dala.logic
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.PieChart
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.dala.logic.ui.BudgetScreen
-import com.dala.logic.ui.TransactionScreen
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.ui.graphics.Color
+import com.dala.logic.data.AppDatabase
+import com.dala.logic.repository.FinanceRepository
+import com.dala.logic.ui.MainScreen
 import com.dala.logic.viewmodel.FinanceViewModel
-import com.dala.logic.ui.DalaDashboard
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Initialize Database, Repository and ViewModel
+        val db = AppDatabase.getDatabase(applicationContext)
+        val repository = FinanceRepository(db.transactionDao(), db.budgetDao())
+        val viewModel = FinanceViewModel(repository)
+
         setContent {
-            MaterialTheme {
-                MainScreen()
-            }
-        }
-    }
-}
-
-@Composable
-fun MainScreen() {
-    val viewModel: FinanceViewModel = viewModel() // Note: In real app, provide repository via Factory
-    var selectedTab by remember { mutableIntStateOf(0) }
-
-    Scaffold(
-        bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    icon = { Icon(Icons.Default.Dashboard, contentDescription = "Dashboard") },
-                    label = { Text("Overview") }
+            MaterialTheme(
+                colorScheme = lightColorScheme(
+                    primary = Color(0xFF6750A4),
+                    onPrimary = Color.White,
+                    primaryContainer = Color(0xFFEADDFF),
+                    onPrimaryContainer = Color(0xFF21005D),
+                    secondary = Color(0xFF625B71),
+                    onSecondary = Color.White,
+                    secondaryContainer = Color(0xFFE8DEF8),
+                    onSecondaryContainer = Color(0xFF1D192B),
+                    tertiary = Color(0xFF7D5260),
+                    onTertiary = Color.White,
+                    tertiaryContainer = Color(0xFFFFD8E4),
+                    onTertiaryContainer = Color(0xFF31111D),
+                    error = Color(0xFFB3261E),
+                    onError = Color.White,
+                    background = Color(0xFFFFFBFE),
+                    onBackground = Color(0xFF1C1B1F),
+                    surface = Color(0xFFFFFBFE),
+                    onSurface = Color(0xFF1C1B1F)
                 )
-                NavigationBarItem(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    icon = { Icon(Icons.Default.History, contentDescription = "Transactions") },
-                    label = { Text("History") }
-                )
-                NavigationBarItem(
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
-                    icon = { Icon(Icons.Default.PieChart, contentDescription = "Budget") },
-                    label = { Text("Budget") }
-                )
-            }
-        }
-    ) { innerPadding ->
-        Surface(modifier = Modifier.padding(innerPadding)) {
-            when (selectedTab) {
-                0 -> DalaDashboard(viewModel = viewModel)
-                1 -> TransactionScreen(viewModel = viewModel)
-                2 -> BudgetScreen(viewModel = viewModel)
+            ) {
+                MainScreen(viewModel = viewModel)
             }
         }
     }
